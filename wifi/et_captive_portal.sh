@@ -84,6 +84,12 @@ start_apache() {
         echo '  CustomLog ${APACHE_LOG_DIR}/access.log combined'
         echo '</VirtualHost>'
 
+        echo '<VirtualHost *:443>'
+        echo '  SSLEngine On'
+        echo '  SSLCertificateFile '"$(pwd)/cert.pem"''
+        echo '  SSLCertificateKeyFile '"$(pwd)/cert.key"''
+        echo '</VirtualHost>'
+
         echo '<Directory "/var/www/html">'
         echo '  RewriteEngine On'
         echo '  RewriteBase /'
@@ -96,6 +102,12 @@ start_apache() {
         echo '</Directory>'
     } > /etc/apache2/sites-enabled/captive_portal.conf
 
+    # enabling https
+    echo "[+] Configuring apache to accept https"
+    openssl req -new -x509 -days 5 -out ./cert.pem -keyout ./cert.key
+    a2enmod ssl
+
+    # starting/restarting apache to save changes made
     apache_status=$(pgrep apache2)
 
     if [ -z "$apache_status" ]; then
@@ -117,6 +129,7 @@ clean_up() {
     echo "[+] Stopping apache2 and removing captive portal configuration..."
     service apache2 stop
     rm /etc/apache2/sites-enabled/captive_portal.conf
+    rm cert.key cert.pem
 
     echo "[+] Killing dnsmasq and deleting hostapd and dnsmasq config files..."
     pkill dnsmasq
